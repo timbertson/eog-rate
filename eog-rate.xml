@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<?xml-stylesheet type='text/xsl' href='interface.xsl'?>
+<interface uri="http://gfxmonk.net/dist/0install/eog-rate.xml" xmlns="http://zero-install.sourceforge.net/2004/injector/interface" xmlns:compile="http://zero-install.sourceforge.net/2006/namespaces/0compile" xmlns:release="http://zero-install.sourceforge.net/2007/namespaces/0release">
+
+	<name>eog-rate</name>
+	<summary>___</summary>
+	<publish mode="featured|third-party|package|0tools|ignore" xmlns="http://gfxmonk.net/dist/0install"/>
+	<description>
+	___
+	</description>
+	<homepage>___</homepage>
+	<package-implementation package="___" distributions="Debian|RPM"/>
+	<feed-for interface="http://gfxmonk.net/dist/0install/eog-rate.xml"/>
+
+	<group>
+		<command name="run">
+			<runner interface="http://gfxmonk.net/dist/0install/eog.xml"/>
+		</command>
+		<requires interface="http://gfxmonk.net/dist/0install/python-dumbattr.xml"/>
+		<environment name="PYTHONPATH" insert="src" mode="prepend" />
+		<environment name="XDG_DATA_DIRS" insert="xdg/data" mode="prepend" />
+
+		<implementation id="." version="0.0.1">
+		</implementation>
+	</group>
+
+</interface>

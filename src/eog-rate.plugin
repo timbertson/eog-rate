@@ -1,0 +1,10 @@
+[Plugin]
+IAge=2
+Loader=python
+Module=eog_rate_plugin
+Name=Rate
+Icon=postr
+Description=Rate and tag your images from within EOG
+Authors=Tim Cuthbertson <tim@gfxmonk.net>
+Copyright=Copyright © 2012 Tim Cuthbertson
+Website=http://gfxmonk.net/dist/0install/eog-rate.xml
