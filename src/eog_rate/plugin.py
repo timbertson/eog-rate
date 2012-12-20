@@ -6,8 +6,7 @@ import logging
 import dumbattr
 logging.getLogger('dumbattr').setLevel(logging.INFO)
 
-RATING = 'rating'
-TAGS = 'tags'
+from .const import RATING, TAGS
 
 ui_str = """
 	<ui>
@@ -19,8 +18,6 @@ ui_str = """
 	      <menuitem name="EyeRank_1" action="EyeRank_1"/>
 	      <menuitem name="EyeRank_2" action="EyeRank_2"/>
 	      <menuitem name="EyeRank_3" action="EyeRank_3"/>
-	      <menuitem name="EyeRank_4" action="EyeRank_4"/>
-	      <menuitem name="EyeRank_5" action="EyeRank_5"/>
 	      <menuitem name="EyeRank_tag" action="EyeRank_tag"/>
 	      <separator/>
 	    </menu>
@@ -45,7 +42,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		self.action_group.add_action(action)
 
 		star = u'\u2605'
-		for i in range(0,6):
+		for i in range(0,4):
 			action = Gtk.Action('EyeRank_%s' % i, _(u'%s: %s' % (i, star * i)), None, None)
 			action.connect('activate', self.make_rate_cb(i), self.window)
 			self.action_group.add_action_with_accel(action, "<Alt>%s" % (i,))
@@ -67,17 +64,22 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 	
 	def make_rate_cb(self, val):
 		def cb(action, window):
-			img = window.get_image()
-			f = img.get_file()
-			dumbattr.set(f.get_path(), RATING, str(val))
+			attrs = self.current_attrs(window)
+			if val == 0:
+				del attrs[RATING]
+			else:
+				attrs[RATING] = str(val)
 		return cb
 
 	#TODO: operate on multiple files using window.get_thumb_view()
 
-	def edit_tag_cb(self, action, window):
+	def current_attrs(self, window):
 		img = window.get_image()
 		f = img.get_file()
-		attrs = dumbattr.load(f.get_path())
+		return dumbattr.load(os.path.realpath(f.get_path()))
+
+	def edit_tag_cb(self, action, window):
+		attrs = self.current_attrs(window)
 		tags = list(map(lambda x: x.strip(), attrs.get(TAGS, '').split(",")))
 		dialog = Gtk.Dialog("Tag editor", parent=window, flags=(Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL))
 
@@ -98,7 +100,11 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 		def cb(dialog, response):
 			if response == Gtk.ResponseType.OK:
-				attrs[TAGS] = entry.get_text()
+				s = entry.get_text().strip()
+				if s:
+					attrs[TAGS] = entry.get_text()
+				else:
+					del attrs[TAGS]
 			else:
 				pass # cancelled
 			dialog.destroy()

@@ -1,0 +1,2 @@
+RATING = 'rating'
+TAGS = 'tags'

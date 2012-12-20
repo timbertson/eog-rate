@@ -16,6 +16,11 @@
 		<command name="run">
 			<runner interface="http://gfxmonk.net/dist/0install/eog.xml"/>
 		</command>
+
+		<command name="find" path="src/eog_rate/find.py">
+			<runner interface="http://repo.roscidus.com/python/python"/>
+		</command>
+
 		<requires interface="http://gfxmonk.net/dist/0install/python-dumbattr.xml"/>
 		<environment name="PYTHONPATH" insert="src" mode="prepend" />
 		<environment name="XDG_DATA_DIRS" insert="xdg/data" mode="prepend" />
