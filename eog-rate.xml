@@ -3,22 +3,16 @@
 <interface uri="http://gfxmonk.net/dist/0install/eog-rate.xml" xmlns="http://zero-install.sourceforge.net/2004/injector/interface" xmlns:compile="http://zero-install.sourceforge.net/2006/namespaces/0compile" xmlns:release="http://zero-install.sourceforge.net/2007/namespaces/0release">
 
 	<name>eog-rate</name>
-	<summary>___</summary>
-	<publish mode="featured|third-party|package|0tools|ignore" xmlns="http://gfxmonk.net/dist/0install"/>
+	<summary>Rating plugin for Eye Of Gnome</summary>
 	<description>
-	___
 	</description>
-	<homepage>___</homepage>
-	<package-implementation package="___" distributions="Debian|RPM"/>
+	<homepage>https://github.com/gfxmonk/eog-rate</homepage>
 	<feed-for interface="http://gfxmonk.net/dist/0install/eog-rate.xml"/>
 
 	<group>
-		<command name="run">
-			<runner interface="http://gfxmonk.net/dist/0install/eog.xml"/>
-		</command>
-
-		<command name="find" path="src/eog_rate/find.py">
+		<command name="run" path="src/eog_rate/cmd.py">
 			<runner interface="http://repo.roscidus.com/python/python"/>
+			<executable-in-path name="eog" interface="http://gfxmonk.net/dist/0install/eog.xml"/>
 		</command>
 
 		<requires interface="http://gfxmonk.net/dist/0install/python-dumbattr.xml"/>

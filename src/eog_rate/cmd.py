@@ -1,0 +1,107 @@
+import os, sys
+import dumbattr
+import operator
+
+from eog_rate.const import RATING, TAGS
+from eog_rate import util
+import optparse
+
+def ls(roots, show_details=True):
+	for root in roots:
+		for path, attrs in _each(root):
+			_print(
+					path,
+					rating=util.get_rating(attrs),
+					tags=util.get_tags(attrs),
+					show_details=show_details)
+
+def _print(path, rating, tags, show_details):
+	if not show_details:
+		print path
+		return
+	stars = '*' * rating
+	parts = ["%3s %s" % (stars, path)]
+	if tags:
+		parts.append("// %s" % (", ".join(tags),))
+	print "\t".join(parts)
+
+def query(predicate, roots, show_details=True):
+	expr = compile(predicate, '(predicate)', 'eval')
+	for root in roots:
+		for path, attrs in _each(root):
+			rating = util.get_rating(attrs)
+			tags = util.get_tags(attrs)
+			show = eval(expr, {'rating': rating, 'tags': tags, 'r':rating,'t':tags,'op':operator})
+			if show:
+				_print(path, rating=rating, tags=tags, show_details=show_details)
+
+def modify(opts, paths):
+	cache = dumbattr.CachingAttributeStore()
+	for path in paths:
+		attrs = dumbattr.load(path)
+
+		tags = util.get_tags(attrs)
+		orig_tags = tags.copy()
+
+		if opts.set_tags is not None:
+			tags = util.parse_tag_str(opts.set_tags)
+		else:
+			tags.update(opts.add_tags)
+			tags.difference_update(opts.remove_tags)
+		if tags != orig_tags:
+			if tags:
+				attrs[TAGS] = util.render_tags(tags)
+			else:
+				del attrs[TAGS]
+			# print "Updated tags to %r for %s" % (tags, path)
+
+		if opts.set_rating:
+			if opts.set_rating:
+				attrs[RATING] = str(opts.set_rating)
+			else:
+				del attrs[RATING]
+			# print "Updated rating to %r for %s" % (rating, path)
+
+def _each(root):
+	if os.path.isfile(root):
+		root, filename = os.path.split(root)
+		attrs = dumbattr.stored_view(root).get(filename, {})
+		if RATING in attrs or TAGS in attrs:
+			yield root, attrs
+	else:
+		for path, dirs, files in os.walk(root):
+			meta = dumbattr.stored_view(path)
+			if meta:
+				for filename, attrs in meta.items():
+					if RATING in attrs or TAGS in attrs:
+						yield os.path.join(path, filename), attrs
+
+def main(argv=None):
+	p = optparse.OptionParser(usage="%prog [OPTIONS] path [path ...]\nor:    %prog run (to launch eog itself)", description="Lists, queries or sets eog-rate metadata.\n\n"
+			"Use `%prog run [args ...]` to launch eog itself with this plugin enabled",
+			prog="eog-rate")
+	p.add_option('-q','--query', help='python predicate to filter on, which can use the following variables: `rating` or `r` (int), `tags` or `t` (set of strings)')
+	p.add_option('-p','--path', action='store_true', dest='path_only', help='print path only (no rating or tags)')
+	p.add_option('--tag', '-t', dest='add_tags', action='append', default=[], metavar='TAG', help='add tag to existing set for all files listed')
+	p.add_option('--untag', '-u', dest='remove_tags', action='append', default=[], metavar='TAG', help='remove tag from existing set for all files listed')
+	p.add_option('--set-tags', metavar='TAGS', help='set tags to the given value (a comma-separated list) for all files listed')
+	p.add_option('--set-rating', metavar='NUMBER', help='set rating to the given value (typically between 0-3, but this is not enforced)', type='int')
+	opts, paths = p.parse_args(argv)
+	assert len(paths) > 0, "Insufficient arguments"
+	if paths[0] == 'run':
+		print "Running eog..."
+		os.execvp('eog',cmd)
+	if opts.add_tags or opts.remove_tags or (opts.set_tags is not None) or opts.set_rating is not None:
+		# modification mode:
+		modify(opts, paths)
+	elif opts.query:
+		# query mode
+		return query(opts.query, paths, show_details = not opts.path_only)
+	else:
+		# list mode by default
+		return ls(paths, show_details = not opts.path_only)
+
+
+if __name__ == '__main__':
+	sys.exit(main())
+

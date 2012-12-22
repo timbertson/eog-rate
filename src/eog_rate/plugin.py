@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 __all__ = ['EogRankPlugin']
+import os
 import subprocess
 from gi.repository import GObject, Eog, Gtk
 import logging
@@ -7,6 +8,7 @@ import dumbattr
 logging.getLogger('dumbattr').setLevel(logging.INFO)
 
 from .const import RATING, TAGS
+from . import util
 
 ui_str = """
 	<ui>
@@ -80,12 +82,12 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 	def edit_tag_cb(self, action, window):
 		attrs = self.current_attrs(window)
-		tags = list(map(lambda x: x.strip(), attrs.get(TAGS, '').split(",")))
+		tags = util.get_tags(attrs)
 		dialog = Gtk.Dialog("Tag editor", parent=window, flags=(Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL))
 
 		entry = Gtk.Entry()
 		#TODO: GtkEntryCompletion
-		entry.set_text(", ".join(tags))
+		entry.set_text(util.render_tags(tags))
 		label = Gtk.Label("Edit tags:")
 		box = dialog.get_content_area()
 		box.add(label)
