@@ -2,6 +2,7 @@
 __all__ = ['EogRankPlugin']
 import os
 import subprocess
+import traceback
 from gi.repository import GObject, Eog, Gtk
 import logging
 import dumbattr
@@ -51,11 +52,11 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 			self.action_group.add_action_with_accel(action, "<Alt>%s" % (i,))
 
 		action = Gtk.Action('eog_rate_tag', _(u'Edit tags'), None, None)
-		action.connect('activate', self.edit_tag_cb, self.window)
+		action.connect('activate', self.wrap_errors(self.edit_tag_cb), self.window)
 		self.action_group.add_action_with_accel(action, "<Ctrl>t")
 
 		action = Gtk.Action('eog_rate_comment', _(u'Edit comment'), None, None)
-		action.connect('activate', self.edit_comment_cb, self.window)
+		action.connect('activate', self.wrap_errors(self.edit_comment_cb), self.window)
 		self.action_group.add_action_with_accel(action, "<Ctrl>k")
 
 		ui_manager.insert_action_group(self.action_group, 0)
@@ -91,6 +92,23 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 			bar.destroy()
 		self.statusbars = None
 		self.statusbar_stars, self.statusbar_tags, self.statusbar_comment = (None, None, None)
+	
+	def wrap_errors(self, fn):
+		def _(*a, **k):
+			try:
+				return fn(*a, **k)
+			except Exception as e:
+				dialog = Gtk.MessageDialog(
+						parent=self.window,
+						flags=(Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL),
+						message_type = Gtk.MessageType.ERROR,
+						buttons = Gtk.ButtonsType.OK,
+						message_format="An error occurred in eog-rate:")
+				dialog.format_secondary_text('''%s: %s\n\n%s''' % (type(e).__name__, str(e), traceback.format_exc()))
+				dialog.run()
+				dialog.destroy()
+				raise
+		return _
 
 	def _change_attr(self, attrs, key, val):
 		if not val:
@@ -103,7 +121,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		def cb(action, window):
 			attrs = self.current_attrs(window)
 			self._change_attr(attrs, RATING, val)
-		return cb
+		return self.wrap_errors(cb)
 
 	def current_attrs(self, window):
 		thumbview = window.get_thumb_view()
@@ -134,7 +152,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 		if comment:
 			self.statusbar_comment.pop(0)
-			comment = "# %s" % (comment,)
+			comment = "#%s" % (comment,)
 			self.statusbar_comment.push(0, comment)
 			self.statusbar_comment.show()
 		else:
@@ -142,15 +160,15 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 	def update_statusbar(self, thumbview):
 		num_selected = thumbview.get_n_selected()
+
+		# if num_selected == 0:
+		# 	print "(no selection)"
+		# if num_selected > 1:
+		# 	print "(multi selection)"
+
 		if num_selected != 1:
 			for bar in self.statusbars:
 				bar.hide()
-
-		if num_selected == 0:
-			print "(no selection)"
-			return
-		if num_selected > 1:
-			print "(multi selection)"
 			return
 
 		attrs = self.current_attrs(self.window)
