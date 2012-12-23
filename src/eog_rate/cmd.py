@@ -55,12 +55,19 @@ def modify(opts, paths):
 				del attrs[TAGS]
 			# print "Updated tags to %r for %s" % (tags, path)
 
-		if opts.set_rating:
+		if opts.set_rating is not None:
 			if opts.set_rating:
 				attrs[RATING] = str(opts.set_rating)
 			else:
 				del attrs[RATING]
 			# print "Updated rating to %r for %s" % (rating, path)
+
+		if opts.set_comment is not None:
+			if opts.set_comment:
+				attrs[RATING] = opts.set_comment
+			else:
+				del attrs[RATING]
+
 
 def _each(root):
 	if os.path.isfile(root):
@@ -82,18 +89,20 @@ def main(argv=None):
 			prog="eog-rate")
 	p.add_option('-q','--query', help='python predicate to filter on, which can use the following variables: `rating` or `r` (int), `tags` or `t` (set of strings)')
 	p.add_option('-p','--path', action='store_true', dest='path_only', help='print path only (no rating or tags)')
-	p.add_option('--tag', '-t', dest='add_tags', action='append', default=[], metavar='TAG', help='add tag to existing set for all files listed')
-	p.add_option('--untag', '-u', dest='remove_tags', action='append', default=[], metavar='TAG', help='remove tag from existing set for all files listed')
+	p.add_option('--tag', dest='add_tags', action='append', default=[], metavar='TAG', help='add tag to existing set for all files listed')
+	p.add_option('--untag', dest='remove_tags', action='append', default=[], metavar='TAG', help='remove tag from existing set for all files listed')
+	p.add_option('--comment', dest='set_comment', help='set comment for all files listed')
 	p.add_option('--set-tags', metavar='TAGS', help='set tags to the given value (a comma-separated list) for all files listed')
-	p.add_option('--set-rating', metavar='NUMBER', help='set rating to the given value (typically between 0-3, but this is not enforced)', type='int')
+	p.add_option('--rating', dest='set_rating', metavar='NUMBER', help='set rating to the given value (typically between 0-3, but this is not enforced)', type='int')
 	opts, paths = p.parse_args(argv)
 	assert len(paths) > 0, "Insufficient arguments"
 	if paths[0] == 'run':
 		print "Running eog..."
+		cmd = ['eog'] + paths[1:]
 		os.execvp('eog',cmd)
-	if opts.add_tags or opts.remove_tags or (opts.set_tags is not None) or opts.set_rating is not None:
+	if opts.add_tags or opts.remove_tags or (opts.set_tags is not None) or (opts.set_comment is not None) or opts.set_rating is not None:
 		# modification mode:
-		modify(opts, paths)
+		return modify(opts, paths)
 	elif opts.query:
 		# query mode
 		return query(opts.query, paths, show_details = not opts.path_only)

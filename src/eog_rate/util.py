@@ -1,4 +1,4 @@
-from .const import RATING, TAGS
+from .const import RATING, TAGS, COMMENT
 
 def get_rating(attrs):
 	s = attrs.get(RATING, 0)
@@ -6,6 +6,14 @@ def get_rating(attrs):
 		return int(s)
 	except ValueError:
 		return 0
+
+def get_comment(attrs, max_length=None):
+	val = attrs.get(COMMENT, "")
+	if max_length is None:
+		return val
+
+	ellipsis = '...'
+	return val if len(val) <= max_length else (val[:len(val) - len(ellipsis)] + ellipsis)
 
 def get_tags(attrs):
 	try:

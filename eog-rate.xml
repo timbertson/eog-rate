@@ -12,7 +12,9 @@
 	<group>
 		<command name="run" path="src/eog_rate/cmd.py">
 			<runner interface="http://repo.roscidus.com/python/python"/>
-			<executable-in-path name="eog" interface="http://gfxmonk.net/dist/0install/eog.xml"/>
+			<requires interface="http://gfxmonk.net/dist/0install/eog.xml">
+				<executable-in-path name="eog"/>
+			</requires>
 		</command>
 
 		<requires interface="http://gfxmonk.net/dist/0install/python-dumbattr.xml"/>
