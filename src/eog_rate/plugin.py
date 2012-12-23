@@ -15,13 +15,13 @@ ui_str = """
 	  <menubar name="MainMenu">
 	    <menu name="ToolsMenu" action="Tools">
 	      <separator/>
-	      <menuitem name="EyeRank_label" action="EyeRank_label"/>
-	      <menuitem name="EyeRank_0" action="EyeRank_0"/>
-	      <menuitem name="EyeRank_1" action="EyeRank_1"/>
-	      <menuitem name="EyeRank_2" action="EyeRank_2"/>
-	      <menuitem name="EyeRank_3" action="EyeRank_3"/>
-	      <menuitem name="EyeRank_tag" action="EyeRank_tag"/>
-	      <menuitem name="EyeRank_comment" action="EyeRank_comment"/>
+	      <menuitem name="eog_rate_label" action="eog_rate_label"/>
+	      <menuitem name="eog_rate_0" action="eog_rate_0"/>
+	      <menuitem name="eog_rate_1" action="eog_rate_1"/>
+	      <menuitem name="eog_rate_2" action="eog_rate_2"/>
+	      <menuitem name="eog_rate_3" action="eog_rate_3"/>
+	      <menuitem name="eog_rate_tag" action="eog_rate_tag"/>
+	      <menuitem name="eog_rate_comment" action="eog_rate_comment"/>
 	      <separator/>
 	    </menu>
 	  </menubar>
@@ -38,23 +38,23 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 	def do_activate(self):
 		ui_manager = self.window.get_ui_manager()
-		self.action_group = Gtk.ActionGroup('EyeRank')
+		self.action_group = Gtk.ActionGroup('eog_rate')
 
-		action = Gtk.Action('EyeRank_label', _(u'EyeRank'), None, None)
+		action = Gtk.Action('eog_rate_label', _(u'eog_rate'), None, None)
 		action.set_sensitive(False)
 		self.action_group.add_action(action)
 
 		star = u'\u2605'
 		for i in range(0,4):
-			action = Gtk.Action('EyeRank_%s' % i, _(u'%s: %s' % (i, star * i)), None, None)
+			action = Gtk.Action('eog_rate_%s' % i, _(u'%s: %s' % (i, star * i)), None, None)
 			action.connect('activate', self.make_rate_cb(i), self.window)
 			self.action_group.add_action_with_accel(action, "<Alt>%s" % (i,))
 
-		action = Gtk.Action('EyeRank_tag', _(u'Edit tags'), None, None)
+		action = Gtk.Action('eog_rate_tag', _(u'Edit tags'), None, None)
 		action.connect('activate', self.edit_tag_cb, self.window)
 		self.action_group.add_action_with_accel(action, "<Ctrl>t")
 
-		action = Gtk.Action('EyeRank_comment', _(u'Edit comment'), None, None)
+		action = Gtk.Action('eog_rate_comment', _(u'Edit comment'), None, None)
 		action.connect('activate', self.edit_comment_cb, self.window)
 		self.action_group.add_action_with_accel(action, "<Ctrl>k")
 
