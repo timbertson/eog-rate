@@ -2,7 +2,7 @@ import os, sys
 import dumbattr
 import operator
 
-from eog_rate.const import RATING, TAGS
+from eog_rate.const import RATING, TAGS, COMMENT
 from eog_rate import util
 import optparse
 
@@ -13,16 +13,19 @@ def ls(roots, show_details=True):
 					path,
 					rating=util.get_rating(attrs),
 					tags=util.get_tags(attrs),
+					comment=util.get_comment(attrs),
 					show_details=show_details)
 
-def _print(path, rating, tags, show_details):
+def _print(path, rating, tags, comment, show_details):
 	if not show_details:
 		print path
 		return
 	stars = '*' * rating
 	parts = ["%3s %s" % (stars, path)]
 	if tags:
-		parts.append("// %s" % (", ".join(tags),))
+		parts.append(" [%s]" % (", ".join(tags),))
+	if comment:
+		parts.append(" #%s" % (comment,))
 	print "\t".join(parts)
 
 def query(predicate, roots, show_details=True):
@@ -31,9 +34,18 @@ def query(predicate, roots, show_details=True):
 		for path, attrs in _each(root):
 			rating = util.get_rating(attrs)
 			tags = util.get_tags(attrs)
-			show = eval(expr, {'rating': rating, 'tags': tags, 'r':rating,'t':tags,'op':operator})
+			comment = util.get_comment(attrs)
+			show = eval(expr, {
+				'rating': rating,
+				'tags': tags,
+				'r':rating,
+				't':tags,
+				'comment':comment,
+				'c':comment,
+				'op':operator,
+			})
 			if show:
-				_print(path, rating=rating, tags=tags, show_details=show_details)
+				_print(path, rating=rating, tags=tags, comment=comment, show_details=show_details)
 
 def modify(opts, paths):
 	cache = dumbattr.CachingAttributeStore()
@@ -64,27 +76,30 @@ def modify(opts, paths):
 
 		if opts.set_comment is not None:
 			if opts.set_comment:
-				attrs[RATING] = opts.set_comment
+				attrs[COMMENT] = opts.set_comment
 			else:
-				del attrs[RATING]
+				del attrs[COMMENT]
 
 
 def _each(root):
 	if os.path.isfile(root):
 		root, filename = os.path.split(root)
 		attrs = dumbattr.stored_view(root).get(filename, {})
-		if RATING in attrs or TAGS in attrs:
-			yield root, attrs
+		yield root, attrs
 	else:
 		for path, dirs, files in os.walk(root):
 			meta = dumbattr.stored_view(path)
 			if meta:
-				for filename, attrs in meta.items():
-					if RATING in attrs or TAGS in attrs:
+				for filename in sorted(files):
+					try:
+						attrs = meta[filename]
+					except KeyError: continue
+					else:
 						yield os.path.join(path, filename), attrs
 
 def main(argv=None):
-	p = optparse.OptionParser(usage="%prog [OPTIONS] path [path ...]\nor:    %prog run (to launch eog itself)", description="Lists, queries or sets eog-rate metadata.\n\n"
+	p = optparse.OptionParser(usage="%prog [OPTIONS] path [path ...]\nor:    %prog run (to launch eog itself)",
+			description="Lists, queries or sets eog-rate metadata.\n\n" +
 			"Use `%prog run [args ...]` to launch eog itself with this plugin enabled",
 			prog="eog-rate")
 	p.add_option('-q','--query', help='python predicate to filter on, which can use the following variables: `rating` or `r` (int), `tags` or `t` (set of strings)')
