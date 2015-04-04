@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-__all__ = ['EogRankPlugin']
 import os
 import subprocess
 import traceback
@@ -41,7 +40,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		ui_manager = self.window.get_ui_manager()
 		self.action_group = Gtk.ActionGroup('eog_rate')
 
-		action = Gtk.Action('eog_rate_label', _(u'eog_rate'), None, None)
+		action = Gtk.Action('eog_rate_label', _(u'Rate'), None, None)
 		action.set_sensitive(False)
 		self.action_group.add_action(action)
 
@@ -49,7 +48,12 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		for i in range(0,4):
 			action = Gtk.Action('eog_rate_%s' % i, _(u'%s: %s' % (i, star * i)), None, None)
 			action.connect('activate', self.make_rate_cb(i), self.window)
-			self.action_group.add_action_with_accel(action, "<Alt>%s" % (i,))
+			# accel = '<alt>%s' % (i,)
+			accel = str(i)
+			if i > 0:
+				# workaround for https://bugzilla.gnome.org/show_bug.cgi?id=690931
+				accel = str(i+1)
+			self.action_group.add_action_with_accel(action, accel)
 
 		action = Gtk.Action('eog_rate_tag', _(u'Edit tags'), None, None)
 		action.connect('activate', self.wrap_errors(self.edit_tag_cb), self.window)
@@ -112,7 +116,8 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 	def _change_attr(self, attrs, key, val):
 		if not val:
-			del attrs[key]
+			if key in attrs:
+				del attrs[key]
 		else:
 			attrs[key] = str(val)
 		self.update_ui(attrs)
