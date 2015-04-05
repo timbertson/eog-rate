@@ -18,7 +18,7 @@ def ls(roots, show_details=True):
 
 def _print(path, rating, tags, comment, show_details):
 	if not show_details:
-		print path
+		print(path)
 		return
 	stars = '*' * rating
 	parts = ["%3s %s" % (stars, path)]
@@ -26,7 +26,7 @@ def _print(path, rating, tags, comment, show_details):
 		parts.append(" [%s]" % (", ".join(tags),))
 	if comment:
 		parts.append(" #%s" % (comment,))
-	print "\t".join(parts)
+	print("\t".join(parts))
 
 def query(predicate, roots, show_details=True):
 	expr = compile(predicate, '(predicate)', 'eval')
@@ -65,14 +65,14 @@ def modify(opts, paths):
 				attrs[TAGS] = util.render_tags(tags)
 			else:
 				del attrs[TAGS]
-			# print "Updated tags to %r for %s" % (tags, path)
+			# print("Updated tags to %r for %s" % (tags, path))
 
 		if opts.set_rating is not None:
 			if opts.set_rating:
 				attrs[RATING] = str(opts.set_rating)
 			else:
 				del attrs[RATING]
-			# print "Updated rating to %r for %s" % (rating, path)
+			# print("Updated rating to %r for %s" % (rating, path))
 
 		if opts.set_comment is not None:
 			if opts.set_comment:
@@ -112,7 +112,7 @@ def main(argv=None):
 	opts, paths = p.parse_args(argv)
 	assert len(paths) > 0, "Insufficient arguments"
 	if paths[0] == 'run':
-		print "Running eog..."
+		print("Running eog...")
 		cmd = ['eog'] + paths[1:]
 		os.execvp('eog',cmd)
 	if opts.add_tags or opts.remove_tags or (opts.set_tags is not None) or (opts.set_comment is not None) or opts.set_rating is not None:

@@ -1,6 +1,6 @@
 [Plugin]
 IAge=2
-Loader=python
+Loader=python3
 Module=eog_rate_plugin
 Name=Rate
 Icon=eog-rate

@@ -22,7 +22,7 @@
 		</command>
 
 		<requires interface="http://repo.roscidus.com/python/python">
-			<version before="3"/>
+			<version not-before="3"/>
 		</requires>
 		<requires interface="http://gfxmonk.net/dist/0install/python-dumbattr.xml"/>
 		<environment name="PYTHONPATH" insert="src" mode="prepend" />
