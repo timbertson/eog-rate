@@ -2,7 +2,7 @@
 import os
 import subprocess
 import traceback
-from gi.repository import GObject, Eog, Gtk
+from gi.repository import GObject, Eog, Gtk, Gio, GLib
 import logging
 import dumbattr
 logging.getLogger('dumbattr').setLevel(logging.INFO)
@@ -10,23 +10,7 @@ logging.getLogger('dumbattr').setLevel(logging.INFO)
 from .const import RATING, TAGS, COMMENT
 from . import util
 
-ui_str = """
-	<ui>
-	  <menubar name="MainMenu">
-	    <menu name="ToolsMenu" action="Tools">
-	      <separator/>
-	      <menuitem name="eog_rate_label" action="eog_rate_label"/>
-	      <menuitem name="eog_rate_0" action="eog_rate_0"/>
-	      <menuitem name="eog_rate_1" action="eog_rate_1"/>
-	      <menuitem name="eog_rate_2" action="eog_rate_2"/>
-	      <menuitem name="eog_rate_3" action="eog_rate_3"/>
-	      <menuitem name="eog_rate_tag" action="eog_rate_tag"/>
-	      <menuitem name="eog_rate_comment" action="eog_rate_comment"/>
-	      <separator/>
-	    </menu>
-	  </menubar>
-	</ui>
-	"""
+_MENU_ID = 'eog-rate'
 
 class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
@@ -35,36 +19,62 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 
 	def __init__(self):
 		GObject.Object.__init__(self)
+		self.app = Eog.Application.get_instance()
+		self.actions = []
+		self.statusbars = ()
+		self.thumbview_signal = None
+	
+	@property
+	def _gear_menu_section(self):
+		return self.window.get_gear_menu_section('plugins-section')
 
 	def do_activate(self):
-		ui_manager = self.window.get_ui_manager()
-		self.action_group = Gtk.ActionGroup('eog_rate')
+		self.do_deactivate() # idempotent
+		model = self._gear_menu_section
+		menu = Gio.Menu()
+		item = Gio.MenuItem.new_section(_(u'Rate'), menu)
+		item.set_attribute([('id', 's', _MENU_ID)])
 
-		action = Gtk.Action('eog_rate_label', _(u'Rate'), None, None)
-		action.set_sensitive(False)
-		self.action_group.add_action(action)
+		def add_menu_item(label, action_name, cb, accel = None):
+			action = Gio.SimpleAction.new(action_name)
+			full_action_name = 'win.' + action_name
+			action.connect('activate', cb, self.window)
+			self.window.add_action(action)
+			self.actions.append(action_name)
+
+			menu.append(label, full_action_name)
+			if accel is not None:
+				self.app.set_accels_for_action(full_action_name, [accel])
+				print("NOTE: set up accels %r for action %r" % (
+					self.app.get_accels_for_action(full_action_name), full_action_name)
+				)
 
 		star = u'\u2605'
 		for i in range(0,4):
-			action = Gtk.Action('eog_rate_%s' % i, _(u'%s: %s' % (i, star * i)), None, None)
-			action.connect('activate', self.make_rate_cb(i), self.window)
-			# accel = '<alt>%s' % (i,)
 			accel = str(i)
 			if i > 0:
 				# workaround for https://bugzilla.gnome.org/show_bug.cgi?id=690931
 				accel = str(i+1)
-			self.action_group.add_action_with_accel(action, accel)
 
-		action = Gtk.Action('eog_rate_tag', _(u'Edit tags'), None, None)
-		action.connect('activate', self.wrap_errors(self.edit_tag_cb), self.window)
-		self.action_group.add_action_with_accel(action, "<Ctrl>t")
+			add_menu_item(
+				label = u'%s: %s' % (i, star * i),
+				action_name = 'eog-rate-%s' % (i,),
+				cb = self.make_rate_cb(i),
+				accel = accel)
 
-		action = Gtk.Action('eog_rate_comment', _(u'Edit comment'), None, None)
-		action.connect('activate', self.wrap_errors(self.edit_comment_cb), self.window)
-		self.action_group.add_action_with_accel(action, "<Ctrl>k")
+		add_menu_item(
+			label = _(u'Edit tags'),
+			action_name = 'eog-rate-tag',
+			cb = self.wrap_errors(self.edit_tag_cb),
+			accel = '<Ctrl>t')
 
-		ui_manager.insert_action_group(self.action_group, 0)
-		self.ui_id = ui_manager.add_ui_from_string(ui_str)
+		add_menu_item(
+			label = _(u'Edit comment'),
+			action_name = 'eog-rate-comment',
+			cb = self.wrap_errors(self.edit_comment_cb),
+			accel = '<Ctrl>k')
+
+		model.append_item(item)
 
 		# insert statusbar
 		window_statusbar = self.window.get_statusbar()
@@ -72,30 +82,48 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		for bar in self.statusbars:
 			window_statusbar.pack_end(bar, False, False, 10)
 
-		self.statusbar_comment, self.statusbar_tags, self.statusbar_stars = self.statusbars
-
 		# bind statusbar updates
 		thumbview = self.window.get_thumb_view()
 		self.thumbview_signal = (thumbview, thumbview.connect_after("selection-changed", self.update_statusbar))
 		self.update_statusbar(thumbview)
 	
 	def do_deactivate(self):
-		ui_manager = self.window.get_ui_manager()
-		ui_manager.remove_ui(self.ui_id)
-		self.ui_id = 0
-		ui_manager.remove_action_group(self.action_group)
-		self.action_group = None
-		ui_manager.ensure_update()
+		for action in self.actions:
+			self.window.remove_action(action)
+		self.actions = []
+
+		menu = self._gear_menu_section
+		for i in range(0, menu.get_n_items()):
+			value = menu.get_item_attribute_value(i, 'id', GLib.VariantType.new('s'))
+			if value and value.get_string() == _MENU_ID:
+				menu.remove(i)
+				break
 
 		# un-bind statubar updates
-		(thumbview, signal) = self.thumbview_signal
-		thumbview.disconnect(signal)
+		if self.thumbview_signal:
+			(thumbview, signal) = self.thumbview_signal
+			thumbview.disconnect(signal)
+			self.thumbview_signal = None
 
 		# remove statusbar
 		for bar in self.statusbars:
 			bar.destroy()
-		self.statusbars = None
-		self.statusbar_stars, self.statusbar_tags, self.statusbar_comment = (None, None, None)
+		self.statusbars = ()
+	
+	def _statusbar_at(self, idx):
+		try:
+			return self.statusbars[idx]
+		except KeyError:
+			return None
+
+	@property
+	def statusbar_stars(self): return self._statusbar_at(0)
+
+	@property
+	def statusbar_tags(self): return self._statusbar_at(1)
+
+	@property
+	def statusbar_comment(self): return self._statusbar_at(2)
 	
 	def wrap_errors(self, fn):
 		def _(*a, **k):
@@ -123,7 +151,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		self.update_ui(attrs)
 
 	def make_rate_cb(self, val):
-		def cb(action, window):
+		def cb(action, param, window):
 			attrs = self.current_attrs(window)
 			self._change_attr(attrs, RATING, val)
 		return self.wrap_errors(cb)
@@ -179,7 +207,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		attrs = self.current_attrs(self.window)
 		self.update_ui(attrs)
 
-	def edit_tag_cb(self, action, window):
+	def edit_tag_cb(self, action, param, window):
 		attrs = self.current_attrs(window)
 		tags = util.get_tags(attrs)
 		dialog = Gtk.Dialog("Tag editor", parent=window, flags=(Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL))
@@ -209,7 +237,7 @@ class EogRatePlugin(GObject.Object, Eog.WindowActivatable):
 		dialog.show()
 
 
-	def edit_comment_cb(self, action, window):
+	def edit_comment_cb(self, action, param, window):
 		attrs = self.current_attrs(window)
 		comment = attrs.get(COMMENT, '')
 		dialog = Gtk.Dialog("Comment editor", parent=window, flags=(Gtk.DialogFlags.DESTROY_WITH_PARENT | Gtk.DialogFlags.MODAL))

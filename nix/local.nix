@@ -1,16 +1,20 @@
 {pkgs ? import <nixpkgs> {}}:
 with pkgs;
 let pythonPackages = python3Packages; in
-stdenv.mkDerivation {
+pkgs.stdenv.mkDerivation {
 	name = "eog-rate";
 	src = ./local.tgz;
 	buildInputs = [
-		gnome3.eog
-		(callPackage ../../dumbattr/nix/local.nix {
+		pkgs.gnome3.eog
+		pkgs.makeWrapper
+		(pkgs.callPackage ../../dumbattr/nix/local.nix {
 			inherit pkgs pythonPackages;
 		})
-		makeWrapper
 	];
+	shellHook = ''
+		export PATH="${pkgs.gnome3.eog}/bin:$PATH";
+		export PYTHONPATH="${pythonPackages.pygobject3}/lib/${pythonPackages.python.libPrefix}/site-packages:$PYTHONPATH"
+	'';
 	installPhase = ''
 		mkdir "$out"
 		cp -a src "$out/src"
