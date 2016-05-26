@@ -1,0 +1,5 @@
+#!/bin/bash
+base="$(cd "$(dirname "$0")/.." && pwd)"
+export PYTHONPATH="$base/src${PYTHONPATH:+:$PYTHONPATH}"
+export XDG_DATA_DIRS="$base/xdg/data:${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
+exec python3 -m eog_rate.cmd "$@"

@@ -113,7 +113,7 @@ def main(argv=None):
 	assert len(paths) > 0, "Insufficient arguments"
 	if paths[0] == 'run':
 		print("Running eog...")
-		cmd = ['eog'] + paths[1:]
+		cmd = ['eog', '--new-instance'] + paths[1:]
 		os.execvp('eog',cmd)
 	if opts.add_tags or opts.remove_tags or (opts.set_tags is not None) or (opts.set_comment is not None) or opts.set_rating is not None:
 		# modification mode:
